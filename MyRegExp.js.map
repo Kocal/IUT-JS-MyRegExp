@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "MyRegExp.js",
+  "sourceRoot": "",
+  "sources": [
+    "MyRegExp.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA,IAAA;;AAAM"
+}
