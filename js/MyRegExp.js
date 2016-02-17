@@ -2,7 +2,29 @@
 var MyRegExp;
 
 MyRegExp = (function() {
-  function MyRegExp() {}
+  function MyRegExp() {
+    console.log("MyRegExp::constructor()");
+    this._debug = true;
+    return;
+  }
+
+  MyRegExp.prototype.isValid = function(regex) {
+    if (this._debug) {
+      console.log("MyRegExp::isValid");
+    }
+  };
+
+  MyRegExp.prototype.test = function(text, regex) {
+    if (this._debug) {
+      console.log("MyRegExp::test");
+    }
+  };
+
+  MyRegExp.prototype.exec = function(text, regex) {
+    if (this._debug) {
+      console.log("MyRegExp::exec");
+    }
+  };
 
   return MyRegExp;
 
