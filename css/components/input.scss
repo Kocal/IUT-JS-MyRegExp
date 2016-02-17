@@ -1,0 +1,11 @@
+$red : #f00;
+
+.input {
+  padding: 8px;
+}
+
+.input-error {
+  background: lighten($red, 30%);
+  border-color: $red;
+  color: darken($red, 15%);
+}

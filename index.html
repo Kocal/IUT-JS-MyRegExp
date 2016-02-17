@@ -11,18 +11,36 @@
     <h1>MyRegExp</h1>
     <div class="regex-container">
       <span>/</span>
-      <input type="text" class="regex">
+      <input type="text" class="input regex" value="[0-9]">
       <span>/</span>
     </div>
     <div class="text-container">
-      <input type="text" class="text">
+      <input type="text" class="input text">
     </div>
   </main>
   <aside id="page-aside">
     <h2>Résultats</h2>
+
+    <h3><i>MyRegExp::test()</i></h3>
+    <p class="myregexp-test"></p>
+
+    <h3><i>MyRegExp::exec()</i></h3>
+    <p class="myregexp-exec"></p>
   </aside>
 
   <script src="js/MyRegExp.js"></script>
-  <script src="js/testMyRegExp.js"></script>
+  <!--<script src="js/testMyRegExp.js"></script>-->
+  <script src="js/App.js"></script>
+  <script>
+    var app = new App(
+      new MyRegExp(),
+      document.querySelector('.regex'),
+      document.querySelector('.text'),
+      document.querySelector('.myregexp-test'),
+      document.querySelector('.myregexp-exec')
+    );
+
+    app.init();
+  </script>
 </body>
 </html>
