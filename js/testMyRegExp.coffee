@@ -9,7 +9,9 @@ regexs = [
     '[0-9]{,1}',
     '[0-9]{}',
     '[0-9]{',
-    'Je m\'appelle (\w)'
+    'Je m\'appelle (\w)',
+    '([0-9]-([0-9]{2}))'
+    '([0-9]-([0-9]{3]))'
 ]
 
 myRegExp = new MyRegExp()
