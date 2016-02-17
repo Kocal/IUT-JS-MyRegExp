@@ -1,0 +1,11 @@
+#page-main {
+  flex: 1;
+  text-align: center;
+  padding: 16px;
+}
+
+#page-main > *:not(:first-child) * {
+
+  font-size: 30px;
+}
+
