@@ -2,7 +2,8 @@ function App(myRegExp, $regex, $text, $resultTest, $resultExec) {
 
     var els = [$regex, $text, $resultTest, $resultExec];
 
-    if (!(myRegExp instanceof MyRegExp)) {
+    if (!(
+        myRegExp instanceof MyRegExp)) {
         throw new Error("Expected an instance of `MyRegExp`");
     }
 
@@ -27,23 +28,26 @@ App.prototype.init = function () {
 };
 
 App.prototype.update = function () {
+    var self = this;
     var regex = this.$regex.value.trim();
     var text = this.$text.value;
 
-    var isValid = this.myRegExp.isValid(regex);
     var resultTest = this.myRegExp.test(regex, text);
     var resultExec = this.myRegExp.exec(regex, text);
 
-    if (!isValid) {
-        this.$regex.classList.add('input-error');
-        this.$resultTest.textContent =
-            this.$resultExec.textContent = "Invalid regex";
-    } else {
-        this.$regex.classList.remove('input-error');
-        this.$resultTest.textContent = resultTest;
-        this.$resultExec.textContent = resultExec;
-    }
+    this.myRegExp.validate(regex, function (err) {
+        if (err) {
+            self.$regex.classList.add('input-error');
+            self.$resultTest.textContent =
+                self.$resultExec.textContent = err;
+            console.error(err);
+            return;
+        }
 
+        self.$regex.classList.remove('input-error');
+        self.$resultTest.textContent = resultTest;
+        self.$resultExec.textContent = resultExec;
+    });
 };
 
 App.prototype.bindEvents = function () {

@@ -7,7 +7,7 @@ function MyRegExp() {
     }
 }
 
-MyRegExp.prototype.isValid = function (regex) {
+MyRegExp.prototype.validate = function (regex, cb) {
     if (this._debug) {
         console.log("MyRegExp::isValid");
     }
@@ -16,8 +16,9 @@ MyRegExp.prototype.isValid = function (regex) {
 
     try {
         circuit = this.circuit.parse(regex);
+        cb();
     } catch (e) {
-        console.error(e);
+        cb(e);
         return false;
     }
 
