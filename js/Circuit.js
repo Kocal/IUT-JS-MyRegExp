@@ -228,8 +228,8 @@ Circuit.prototype.parse = function (regex) {
      */
     this.deepLevel = 0;
 
-    while (this.cursor < regex.length + 1) {
-        this.token = this.getNextToken(regex);
+    while (this.cursor < this.regex.length + 1) {
+        this.token = this.getNextToken(this.regex);
 
         console.log('stack :', stack, 'cursor :', this.cursor, '; token :', this.token);
 
@@ -247,6 +247,11 @@ Circuit.prototype.parse = function (regex) {
             case this.TOKEN_CHARACTER_SETS_OPEN:
                 stack.push(this.TOKEN_CHARACTER_SETS_CLOSE);
                 this.openCharacterSet();
+                break;
+
+            case this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC:
+                this.regex = this.regex.replace(this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC, '[a-zA-Z0-9_]');
+                this.cursor -= this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC.length;
                 break;
 
             case this.TOKEN_GROUP_CLOSE:
@@ -350,14 +355,12 @@ Circuit.prototype.closeCharacterSet = function () {
                 throw new Error("Impossible to generate an array from a range of two incompatible types")
             }
 
-            //console.log(fromType);
-
             if (fromType == this.TYPE_NUMBER) {
                 from = parseInt(from);
                 to = parseInt(to);
 
                 cb = function (c) {
-                    if (lastSet.possibleChars[c] == null) {
+                    if (lastSet.possibleChars.indexOf(c) == -1) {
                         lastSet.possibleChars.push(c);
                     }
                 }
@@ -366,8 +369,9 @@ Circuit.prototype.closeCharacterSet = function () {
             if (fromType == this.TYPE_LETTER) {
                 from = from.charCodeAt();
                 to = to.charCodeAt();
+
                 cb = function (c) {
-                    if (lastSet.possibleChars[c] == null) {
+                    if (lastSet.possibleChars.indexOf(c) == -1) {
                         lastSet.possibleChars.push(String.fromCharCode(c));
                     }
                 }
