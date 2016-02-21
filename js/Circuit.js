@@ -4,18 +4,6 @@
  */
 function Circuit() {
 
-    /**
-     * Pile de groupes de capture
-     * @type {Array}
-     */
-    this.stackCaptureGroups = [];
-
-    /**
-     * Pile de jeux de caractères
-     * @type {Array}
-     */
-    this.stackCharacterSets = [];
-
     // Merci à la doc' de Mozilla pour tous les différents tokens
 
     /**
@@ -201,15 +189,7 @@ function Circuit() {
     this.TYPE_OTHER = 3;
 }
 
-Circuit.prototype.parse = function (regex) {
-    var stack = [];
-
-    /**
-     * Regex en cours de traitement
-     * @type {string}
-     */
-    this.regex = regex;
-
+Circuit.prototype.reset = function() {
     /**
      * Un token
      * @type {string}
@@ -227,6 +207,30 @@ Circuit.prototype.parse = function (regex) {
      * @type {number}
      */
     this.deepLevel = 0;
+
+    /**
+     * Pile de groupes de capture
+     * @type {Array}
+     */
+    this.stackCaptureGroups = [];
+
+    /**
+     * Pile de jeux de caractères
+     * @type {Array}
+     */
+    this.stackCharacterSets = [];
+};
+
+Circuit.prototype.parse = function (regex) {
+    var stack = [];
+
+    /**
+     * Regex en cours de traitement
+     * @type {string}
+     */
+    this.regex = regex;
+
+    this.reset();
 
     while (this.cursor < this.regex.length + 1) {
         this.token = this.getNextToken(this.regex);
@@ -333,6 +337,7 @@ Circuit.prototype.openCharacterSet = function () {
  * Ferme un jeu de caractères
  */
 Circuit.prototype.closeCharacterSet = function () {
+    var self = this;
     var lastSet = this.stackCharacterSets[this.stackCharacterSets.length - 1];
 
     lastSet.to = this.cursor;
@@ -341,11 +346,15 @@ Circuit.prototype.closeCharacterSet = function () {
     lastSet.possibleChars = [];
 
     for (var cursor = 0; cursor < lastSet.characterSet.length; cursor++) {
-        // range! e.g. [a-z]
+        // range! e.g.
         if (lastSet.characterSet[cursor + 1] == '-' && lastSet.characterSet[cursor + 2] != null) {
+            // début de la range
             var from = lastSet.characterSet[cursor];
+            // fin de la range
             var to = lastSet.characterSet[cursor + 2];
-            var cb = function () {};
+            // callback en fonction du type de caractère
+            var cb = function () {
+            };
 
             var fromType = this.getType(from);
             var toType = this.getType(to);
@@ -355,34 +364,34 @@ Circuit.prototype.closeCharacterSet = function () {
                 throw new Error("Impossible to generate an array from a range of two incompatible types")
             }
 
-            if (fromType == this.TYPE_NUMBER) {
-                from = parseInt(from);
-                to = parseInt(to);
+            switch (fromType) {
+                // Les deux caractères qui constituent la range sont des nombres
+                case this.TYPE_NUMBER:
+                    from = parseInt(from);
+                    to = parseInt(to);
 
-                cb = function (c) {
-                    if (lastSet.possibleChars.indexOf(c) == -1) {
-                        lastSet.possibleChars.push(c);
-                    }
-                }
-            }
+                    cb = function (c) {
+                        self.pushTo(lastSet.possibleChars, c);
+                    };
 
-            if (fromType == this.TYPE_LETTER) {
-                from = from.charCodeAt();
-                to = to.charCodeAt();
+                    break;
 
-                cb = function (c) {
-                    if (lastSet.possibleChars.indexOf(c) == -1) {
-                        lastSet.possibleChars.push(String.fromCharCode(c));
-                    }
-                }
+                case this.TYPE_LETTER:
+                    from = from.charCodeAt();
+                    to = to.charCodeAt();
+
+                    cb = function (c) {
+                        self.pushTo(lastSet.possibleChars, String.fromCharCode(c));
+                    };
+
+                    break;
             }
 
             this.generateRange(from, to, cb);
-
             cursor += 2; // on a déjà traité "-" et "to"
 
-        } else {
-            lastSet.possibleChars.push(lastSet.characterSet[cursor]);
+        } else { // pas range
+            this.pushTo(lastSet.possibleChars, lastSet.characterSet[cursor]);
         }
     }
 };
@@ -404,6 +413,15 @@ Circuit.prototype.getType = function (char) {
     }
 
     return this.TYPE_OTHER;
+};
+
+Circuit.prototype.pushTo = function (array, char) {
+    if(array.indexOf(char) == -1) {
+        array.push(char);
+        return true;
+    }
+
+    return false;
 };
 
 Circuit.prototype.generateRange = function (from, to, cb) {
