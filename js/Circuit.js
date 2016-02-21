@@ -187,9 +187,36 @@ function Circuit() {
      * @type {number}
      */
     this.TYPE_OTHER = 3;
+
+    /**
+     *
+     * @type {number}
+     */
+    this.TYPE_CAPTURE_GROUP = 4;
+
+    /**
+     *
+     * @type {number}
+     */
+    this.TYPE_CHARACTER_SET = 5;
+
+    this.equivalent = {};
+
+    this.equivalent[this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC] = '[A-Za-z0-9_]';
+    this.equivalent[this.TOKEN_CHARACTER_CLASS_NOT_ALPHANUMERIC] = '[^A-Za-z0-9_]';
+
+    this.equivalent[this.TOKEN_CHARACTER_CLASS_DIGIT] = '[0-9]';
+    this.equivalent[this.TOKEN_CHARACTER_CLASS_NOT_DIGIT] = '[^0-9]';
+
+    this.equivalent[this.TOKEN_CHARACTER_CLASS_WHITESPACE] = '[ \\f\\n\\r\\t\\v\\u00a0\\u1680​\\u180e\\u2000​-\\u200a​\\u2028\\u2029\\u202f\\u205f​\\u3000\\ufeff]';
+    this.equivalent[this.TOKEN_CHARACTER_CLASS_NOT_WHITESPACE] = '[^ \\f\\n\\r\\t\\v\\u00a0\\u1680​\\u180e\\u2000​-\\u200a​\\u2028\\u2029\\u202f\\u205f​\\u3000\\ufeff]';
+
+    this.equivalent[this.TOKEN_QUANTIFIER_ZERO_OR_ONE] = '{0,1}';
+    this.equivalent[this.TOKEN_QUANTIFIER_ZERO_OR_MORE] = '{0,}';
+    this.equivalent[this.TOKEN_QUANTIFIER_ONE_OR_MORE] = '{1,}';
 }
 
-Circuit.prototype.reset = function() {
+Circuit.prototype.reset = function () {
     /**
      * Un token
      * @type {string}
@@ -209,16 +236,11 @@ Circuit.prototype.reset = function() {
     this.deepLevel = 0;
 
     /**
-     * Pile de groupes de capture
+     * Le circuit !!
      * @type {Array}
      */
-    this.stackCaptureGroups = [];
+    this.circuit = []
 
-    /**
-     * Pile de jeux de caractères
-     * @type {Array}
-     */
-    this.stackCharacterSets = [];
 };
 
 Circuit.prototype.parse = function (regex) {
@@ -235,7 +257,7 @@ Circuit.prototype.parse = function (regex) {
     while (this.cursor < this.regex.length + 1) {
         this.token = this.getNextToken(this.regex);
 
-        console.log('stack :', stack, 'cursor :', this.cursor, '; token :', this.token);
+        //console.log('stack :', stack, 'cursor :', this.cursor, '; token :', this.token);
 
         switch (this.token) {
             case this.TOKEN_GROUP_OPEN:
@@ -253,9 +275,21 @@ Circuit.prototype.parse = function (regex) {
                 this.openCharacterSet();
                 break;
 
+            case this.TOKEN_QUANTIFIER_ZERO_OR_ONE:
+                console.log(this.token);
+                break;
+
+            case this.TOKEN_QUANTIFIER_ZERO_OR_MORE:
+                console.log(this.token);
+                break;
+
+            case this.TOKEN_QUANTIFIER_ONE_OR_MORE:
+                console.log(this.token);
+                break;
+
+            //TODO: à optimiser mdr
             case this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC:
-                this.regex = this.regex.replace(this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC, '[a-zA-Z0-9_]');
-                this.cursor -= this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC.length;
+                this.replace(this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC, '[a-zA-Z0-9_]');
                 break;
 
             case this.TOKEN_GROUP_CLOSE:
@@ -306,10 +340,21 @@ Circuit.prototype.getNextToken = function (regex) {
 };
 
 /**
+ * Remplace un token par son equivalent dans la regex, et remet le curseur à sa place
+ * @param token
+ * @param equivalent
+ */
+Circuit.prototype.replace = function (token, equivalent) {
+    this.regex = this.regex.replace(token, equivalent);
+    this.cursor -= token.length;
+};
+
+/**
  * Ouvre un groupe de capture
  */
 Circuit.prototype.openCaptureGroup = function () {
-    this.stackCaptureGroups.push({
+    this.circuit.push({
+        type: this.TYPE_CAPTURE_GROUP,
         from: this.cursor - 1
     });
 };
@@ -318,17 +363,29 @@ Circuit.prototype.openCaptureGroup = function () {
  * Ferme un groupe de capture
  */
 Circuit.prototype.closeCaptureGroup = function () {
-    var lastGroup = this.stackCaptureGroups[this.stackCaptureGroups.length - 1];
+    var lastGroup = this.getLast(this.TYPE_CAPTURE_GROUP);
 
     lastGroup.to = this.cursor;
     lastGroup.capture = this.regex.substring(lastGroup.from, lastGroup.to);
+};
+
+Circuit.prototype.getLast = function (type) {
+    var i = 0;
+    var circuitComponent = {};
+
+    while (circuitComponent.type != type) {
+        circuitComponent = this.circuit[this.circuit.length - ++i]
+    }
+
+    return circuitComponent;
 };
 
 /**
  * Ouvre un jeu de caractères
  */
 Circuit.prototype.openCharacterSet = function () {
-    this.stackCharacterSets.push({
+    this.circuit.push({
+        type: this.TYPE_CHARACTER_SET,
         from: this.cursor - 1
     });
 };
@@ -338,7 +395,7 @@ Circuit.prototype.openCharacterSet = function () {
  */
 Circuit.prototype.closeCharacterSet = function () {
     var self = this;
-    var lastSet = this.stackCharacterSets[this.stackCharacterSets.length - 1];
+    var lastSet = this.getLast(this.TYPE_CHARACTER_SET);
 
     lastSet.to = this.cursor;
     // +1 & -1 pour supprimer les []
@@ -348,9 +405,7 @@ Circuit.prototype.closeCharacterSet = function () {
     for (var cursor = 0; cursor < lastSet.characterSet.length; cursor++) {
         // range! e.g.
         if (lastSet.characterSet[cursor + 1] == '-' && lastSet.characterSet[cursor + 2] != null) {
-            // début de la range
             var from = lastSet.characterSet[cursor];
-            // fin de la range
             var to = lastSet.characterSet[cursor + 2];
             // callback en fonction du type de caractère
             var cb = function () {
@@ -415,8 +470,14 @@ Circuit.prototype.getType = function (char) {
     return this.TYPE_OTHER;
 };
 
+/**
+ * Push un élément dans un tableau si cet élément n'existe pas déjà dans le tableau
+ * @param array
+ * @param char
+ * @returns {boolean}
+ */
 Circuit.prototype.pushTo = function (array, char) {
-    if(array.indexOf(char) == -1) {
+    if (array.indexOf(char) == -1) {
         array.push(char);
         return true;
     }
@@ -424,6 +485,12 @@ Circuit.prototype.pushTo = function (array, char) {
     return false;
 };
 
+/**
+ * Génère une range en fonction de from et to
+ * @param from
+ * @param to
+ * @param cb callback
+ */
 Circuit.prototype.generateRange = function (from, to, cb) {
     // wow
     if (from > to) {
