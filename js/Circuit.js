@@ -255,11 +255,20 @@ Circuit.prototype.parse = function (regex) {
     this.reset();
 
     while (this.cursor < this.regex.length + 1) {
-        this.token = this.getNextToken(this.regex);
-
-        //console.log('stack :', stack, 'cursor :', this.cursor, '; token :', this.token);
-
         switch (this.token) {
+            // On remplace d'abord les tokens avec équivalents, et on rewind
+            case this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC:
+            case this.TOKEN_CHARACTER_CLASS_NOT_ALPHANUMERIC:
+            case this.TOKEN_CHARACTER_CLASS_DIGIT:
+            case this.TOKEN_CHARACTER_CLASS_NOT_DIGIT:
+            case this.TOKEN_CHARACTER_CLASS_WHITESPACE:
+            case this.TOKEN_CHARACTER_CLASS_NOT_WHITESPACE:
+            case this.TOKEN_QUANTIFIER_ZERO_OR_ONE:
+            case this.TOKEN_QUANTIFIER_ZERO_OR_MORE:
+            case this.TOKEN_QUANTIFIER_ONE_OR_MORE:
+                this.replace(this.token, this.equivalent[this.token]);
+                break;
+
             case this.TOKEN_GROUP_OPEN:
                 stack.push(this.TOKEN_GROUP_CLOSE);
                 this.openCaptureGroup();
@@ -273,23 +282,6 @@ Circuit.prototype.parse = function (regex) {
             case this.TOKEN_CHARACTER_SETS_OPEN:
                 stack.push(this.TOKEN_CHARACTER_SETS_CLOSE);
                 this.openCharacterSet();
-                break;
-
-            case this.TOKEN_QUANTIFIER_ZERO_OR_ONE:
-                console.log(this.token);
-                break;
-
-            case this.TOKEN_QUANTIFIER_ZERO_OR_MORE:
-                console.log(this.token);
-                break;
-
-            case this.TOKEN_QUANTIFIER_ONE_OR_MORE:
-                console.log(this.token);
-                break;
-
-            //TODO: à optimiser mdr
-            case this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC:
-                this.replace(this.TOKEN_CHARACTER_CLASS_ALPHANUMERIC, '[a-zA-Z0-9_]');
                 break;
 
             case this.TOKEN_GROUP_CLOSE:
@@ -313,6 +305,10 @@ Circuit.prototype.parse = function (regex) {
                         break;
                 }
         }
+
+        this.token = this.getNextToken(this.regex);
+
+        console.log('stack :', stack, 'cursor :', this.cursor, '; token :', this.token);
     }
 
     console.log(stack);
