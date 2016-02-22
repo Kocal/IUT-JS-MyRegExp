@@ -147,6 +147,12 @@ function Circuit() {
     this.TOKEN_QUANTIFIER_OPEN = '{';
 
     /**
+     * Délimite un quantifier
+     * @type {string}
+     */
+    this.TOKEN_QUANTIFIER_SEPARATOR = ',';
+
+    /**
      * Partie fermante d'un quantifier
      * @type {string}
      */
@@ -199,6 +205,12 @@ function Circuit() {
      * @type {number}
      */
     this.TYPE_CHARACTER_SET = 5;
+
+    /**
+     *
+     * @type {number}
+     */
+    this.TYPE_QUANTIFIER = 6;
 
     this.equivalent = {};
 
@@ -277,6 +289,7 @@ Circuit.prototype.parse = function (regex) {
 
             case this.TOKEN_QUANTIFIER_OPEN:
                 stack.push(this.TOKEN_QUANTIFIER_CLOSE);
+                this.openQuantifier();
                 break;
 
             case this.TOKEN_CHARACTER_SETS_OPEN:
@@ -298,6 +311,10 @@ Circuit.prototype.parse = function (regex) {
                     case this.TOKEN_GROUP_CLOSE:
                         this.closeCaptureGroup();
                         this.deepLevel--;
+                        break;
+
+                    case this.TOKEN_QUANTIFIER_CLOSE:
+                        this.closeQuantifier();
                         break;
 
                     case this.TOKEN_CHARACTER_SETS_CLOSE:
@@ -359,12 +376,17 @@ Circuit.prototype.openCaptureGroup = function () {
  * Ferme un groupe de capture
  */
 Circuit.prototype.closeCaptureGroup = function () {
-    var lastGroup = this.getLast(this.TYPE_CAPTURE_GROUP);
+    var lastCapture = this.getLast(this.TYPE_CAPTURE_GROUP);
 
-    lastGroup.to = this.cursor;
-    lastGroup.capture = this.regex.substring(lastGroup.from, lastGroup.to);
+    lastCapture.to = this.cursor;
+    lastCapture.capture = this.regex.substring(lastCapture.from, lastCapture.to);
 };
 
+/**
+ * Récupère le dernier élément du circuit de type "type"
+ * @param type
+ * @returns {{}}
+ */
 Circuit.prototype.getLast = function (type) {
     var i = 0;
     var circuitComponent = {};
@@ -374,6 +396,105 @@ Circuit.prototype.getLast = function (type) {
     }
 
     return circuitComponent;
+};
+
+/**
+ * Ouvre un quantifier
+ */
+Circuit.prototype.openQuantifier = function () {
+    this.circuit.push({
+        type: this.TYPE_QUANTIFIER,
+        from: this.cursor - 1
+    });
+};
+
+/**
+ * Ferme un quantifier
+ */
+Circuit.prototype.closeQuantifier = function () {
+    var lastQuantifier = this.getLast(this.TYPE_QUANTIFIER);
+    var lastGroup = null;
+    var prevChar = this.regex.substr(lastQuantifier.from - 1, 1);
+
+    lastQuantifier.to = this.cursor;
+    lastQuantifier.capture = this.regex.substring(lastQuantifier.from, lastQuantifier.to);
+
+
+    switch (prevChar) {
+        case this.TOKEN_CHARACTER_SETS_CLOSE:
+            lastGroup = this.getLast(this.TYPE_CHARACTER_SET);
+            break;
+
+        case this.TOKEN_GROUP_CLOSE:
+            lastGroup = this.getLast(this.TYPE_CAPTURE_GROUP);
+            break;
+
+        default:
+            // magic trick (en fait on transforme le caractère en classe de caractère)
+            this.cursor = lastQuantifier.from;
+            this.openCharacterSet();
+            this.closeCharacterSet();
+            this.cursor = lastQuantifier.to;
+            lastGroup = this.getLast(this.TYPE_CHARACTER_SET);
+    }
+
+    if (!lastGroup) {
+        return;
+    }
+
+    var repeat = {
+        from: null,
+        to: null
+    };
+
+    var internalCursor = 0;
+    var buffer = '';
+
+    // On extrait les données du quantifier
+    for(var len = lastQuantifier.capture.length; internalCursor < len; internalCursor++) {
+        var char = lastQuantifier.capture[internalCursor];
+
+        switch(char) {
+            case this.TOKEN_QUANTIFIER_OPEN:
+                break;
+
+            case this.TOKEN_QUANTIFIER_SEPARATOR:
+                repeat.from = buffer;
+                buffer = '';
+                break;
+
+            case this.TOKEN_QUANTIFIER_CLOSE:
+                if(buffer.length == 0) {
+                    buffer = Number.MAX_VALUE;
+                }
+
+                if(repeat.from == null) {
+                    repeat.from = buffer;
+                }
+
+                repeat.to = buffer;
+                break;
+
+            default:
+                buffer += char;
+        }
+    }
+
+    for(var prop in repeat) {
+        var value = repeat[prop];
+
+        if(this.getType(value) == this.TYPE_NUMBER) {
+            repeat[prop] = value * 1
+        } else {
+            throw new Error('Values of a quantifier class should be a number');
+        }
+    }
+
+    if(repeat.from > repeat.to) {
+        throw new Error('First value of quantifier class should be leather than the second value');
+    }
+
+    lastGroup.repeat = repeat;
 };
 
 /**
