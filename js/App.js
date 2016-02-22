@@ -1,4 +1,4 @@
-function App(myRegExp, $regex, $text, $resultTest, $resultExec) {
+function App(myRegExp, $regex, $text, $resultCircuitRegex, $resultTest, $resultExec) {
 
     var els = [$regex, $text, $resultTest, $resultExec];
 
@@ -18,6 +18,7 @@ function App(myRegExp, $regex, $text, $resultTest, $resultExec) {
     this.myRegExp = myRegExp;
     this.$regex = $regex;
     this.$text = $text;
+    this.$resultCircuitRegex = $resultCircuitRegex;
     this.$resultTest = $resultTest;
     this.$resultExec = $resultExec;
 }
@@ -32,19 +33,25 @@ App.prototype.update = function () {
     var regex = this.$regex.value.trim();
     var text = this.$text.value;
 
+    var resultCircuitRegex = '';
     var resultTest = this.myRegExp.test(regex, text);
     var resultExec = this.myRegExp.exec(regex, text);
 
     this.myRegExp.validate(regex, function (err) {
+        resultCircuitRegex = self.myRegExp.circuit.regex;
+
         if (err) {
             self.$regex.classList.add('input-error');
-            self.$resultTest.textContent =
+            self.$resultCircuitRegex.textContent =
+                self.$resultTest.textContent =
                 self.$resultExec.textContent = err;
+
             console.error(err);
             return;
         }
 
         self.$regex.classList.remove('input-error');
+        self.$resultCircuitRegex.textContent = resultCircuitRegex;
         self.$resultTest.textContent = resultTest;
         self.$resultExec.textContent = resultExec;
     });
