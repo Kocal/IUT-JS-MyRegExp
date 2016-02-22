@@ -451,10 +451,10 @@ Circuit.prototype.closeQuantifier = function () {
     var buffer = '';
 
     // On extrait les données du quantifier
-    for(var len = lastQuantifier.capture.length; internalCursor < len; internalCursor++) {
+    for (var len = lastQuantifier.capture.length; internalCursor < len; internalCursor++) {
         var char = lastQuantifier.capture[internalCursor];
 
-        switch(char) {
+        switch (char) {
             case this.TOKEN_QUANTIFIER_OPEN:
                 break;
 
@@ -464,11 +464,11 @@ Circuit.prototype.closeQuantifier = function () {
                 break;
 
             case this.TOKEN_QUANTIFIER_CLOSE:
-                if(buffer.length == 0) {
+                if (buffer.length == 0) {
                     buffer = Number.MAX_VALUE;
                 }
 
-                if(repeat.from == null) {
+                if (repeat.from == null) {
                     repeat.from = buffer;
                 }
 
@@ -480,17 +480,17 @@ Circuit.prototype.closeQuantifier = function () {
         }
     }
 
-    for(var prop in repeat) {
+    for (var prop in repeat) {
         var value = repeat[prop];
 
-        if(this.getType(value) == this.TYPE_NUMBER) {
+        if (this.getType(value) == this.TYPE_NUMBER) {
             repeat[prop] = value * 1
         } else {
             throw new Error('Values of a quantifier class should be a number');
         }
     }
 
-    if(repeat.from > repeat.to) {
+    if (repeat.from > repeat.to) {
         throw new Error('First value of quantifier class should be leather than the second value');
     }
 
@@ -516,10 +516,15 @@ Circuit.prototype.closeCharacterSet = function () {
 
     lastSet.to = this.cursor;
     // +1 & -1 pour supprimer les []
-    lastSet.characterSet = this.regex.substring(lastSet.from + 1, lastSet.to - 1);
+    lastSet.characterSet = this.regex.substring(lastSet.from, lastSet.to );
     lastSet.possibleChars = [];
 
-    for (var cursor = 0; cursor < lastSet.characterSet.length; cursor++) {
+    // Si on a qu'un caractère, alors on le transforme en character set
+    if(lastSet.characterSet.length == 1) {
+        lastSet.characterSet = '[' + lastSet.characterSet + ']';
+    }
+
+    for (var cursor = 1; cursor < lastSet.characterSet.length - 1; cursor++) {
         // range! e.g.
         if (lastSet.characterSet[cursor + 1] == '-' && lastSet.characterSet[cursor + 2] != null) {
             var from = lastSet.characterSet[cursor];
@@ -616,5 +621,46 @@ Circuit.prototype.generateRange = function (from, to, cb) {
 
     for (var i = from; i < to + 1; i++) {
         cb(i);
+    }
+};
+
+Circuit.prototype.printCircuit = function () {
+    var args;
+    var node;
+
+    for (var i in this.circuit) {
+        args = [];
+        node = this.circuit[i];
+
+        args.push('Node #' + i);
+
+        switch (node.type) {
+
+            case this.TYPE_QUANTIFIER:
+                args.push('QUANTIFIER');
+                args.push(node.capture);
+                break;
+
+            case this.TYPE_CHARACTER_SET:
+                var hasRepeat = !!node.repeat;
+
+                args.push('JEU DE CARACTÈRES');
+                args.push('Répétition : ' + (
+                        hasRepeat ? '{' + node.repeat.from + ',' + node.repeat.to + '}' : false
+                    ));
+                args.push('character set :');
+                args.push(node.characterSet);
+                args.push('characters :');
+                args.push(node.possibleChars.length == 1 ? node.possibleChars[0] : node.possibleChars.join(''));
+                break;
+
+            case this.TYPE_CAPTURE_GROUP:
+                args.push('GROUPE DE CAPTURE');
+                args.push(node.capture);
+        }
+
+        if(args.length != 0) {
+            console.info.apply(console, [args]);
+        }
     }
 };
