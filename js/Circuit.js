@@ -601,7 +601,7 @@ Circuit.prototype.closeCharacterSet = function () {
 
 /**
  * Get the last node from circuit where its type equals `type`
- * @param {String} type NODE_CAPTURE_GROUP or NODE_CHARACTER_SET or NODE_QUANTIFIER
+ * @param {Number} type NODE_CAPTURE_GROUP or NODE_CHARACTER_SET or NODE_QUANTIFIER
  * @returns {{}}
  */
 Circuit.prototype.getLast = function (type) {
