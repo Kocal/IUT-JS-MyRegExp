@@ -253,7 +253,7 @@ function Circuit() {
      * Circuit built after parsing of the regex
      * @type {Array}
      */
-    this.circuit = []
+    this.circuit = [];
 }
 
 /**
@@ -263,7 +263,7 @@ Circuit.prototype.reset = function () {
     this.token = '';
     this.cursor = 0;
     this.deepLevel = 0;
-    this.circuit = []
+    this.circuit = [];
 };
 
 /**
@@ -424,7 +424,7 @@ Circuit.prototype.replace = function (token, equivalent) {
     var length = token.length;
 
     this.regex =
-        this.regex.substr(0, this.cursor - 1)
+        this.regex.substr(0, this.cursor - length)
         + equivalent
         + this.regex.substr(this.cursor);
 
