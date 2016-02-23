@@ -1,16 +1,23 @@
+/**
+ * The app!
+ * @param {MyRegExp} myRegExp Instance of `MyRegExp`
+ * @param {HTMLElement} $regex HTML element for regex input
+ * @param {HTMLElement} $text HTML element for text input
+ * @param {HTMLElement} $resultCircuitRegex HTML element to display the regex built by Circuit.js
+ * @param {HTMLElement} $resultTest HTML element which will display the result of MyRegExp.test()
+ * @param {HTMLElement} $resultExec HTML element which will display the result of MyRegExp.exec()
+ * @constructor
+ */
 function App(myRegExp, $regex, $text, $resultCircuitRegex, $resultTest, $resultExec) {
 
-    var els = [$regex, $text, $resultTest, $resultExec];
+    var els = [$regex, $text, $resultCircuitRegex, $resultTest, $resultExec];
 
-    if (!(
-        myRegExp instanceof MyRegExp)) {
+    if (!(myRegExp instanceof MyRegExp)) {
         throw new Error("Expected an instance of `MyRegExp`");
     }
 
     for (var i = 0, len = els.length; i < len; i++) {
-        var el = els[i];
-
-        if (el == null) {
+        if (els[i] == null) {
             throw new Error("One of elements cannot be found");
         }
     }
@@ -23,22 +30,30 @@ function App(myRegExp, $regex, $text, $resultCircuitRegex, $resultTest, $resultE
     this.$resultExec = $resultExec;
 }
 
+/**
+ * Initialise the application
+ */
 App.prototype.init = function () {
     this.update();
     this.bindEvents();
 };
 
+/**
+ * Should be called after a modification on the regex or the text
+ */
 App.prototype.update = function () {
     var self = this;
-    var regex = this.$regex.value.trim();
+    var regex = this.$regex.value;
     var text = this.$text.value;
 
     var resultCircuitRegex = '';
-    var resultTest = this.myRegExp.test(regex, text);
-    var resultExec = this.myRegExp.exec(regex, text);
+    var resultTest = '';
+    var resultExec = '';
 
     this.myRegExp.validate(regex, function (err) {
         resultCircuitRegex = self.myRegExp.circuit.regex;
+        resultTest = self.myRegExp.test(regex, text);
+        resultExec = self.myRegExp.exec(regex, text);
 
         if (err) {
             self.$regex.classList.add('input-error');
@@ -57,11 +72,13 @@ App.prototype.update = function () {
     });
 };
 
+/**
+ * Bind events to HTML elements
+ */
 App.prototype.bindEvents = function () {
     var self = this;
 
-    // On évitera de lancer le parsing de la regex si on ne fait que déplacer
-    // le curseur dans les zones de text
+    // Prevent the call to an handler if the user is just moving the cursor with his keyboard
     var regexValue = this.$regex.value;
     var textValue = this.$text.value;
 
@@ -84,10 +101,18 @@ App.prototype.bindEvents = function () {
     });
 };
 
+/**
+ * Called when the regex value has changed
+ * @param {Event} e
+ */
 App.prototype.onRegexChange = function (e) {
     this.update();
 };
 
+/**
+ * Callend when the text value has changed
+ * @param {Event} e
+ */
 App.prototype.onTextChange = function (e) {
     this.update();
 };
