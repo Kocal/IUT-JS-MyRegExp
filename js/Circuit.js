@@ -1,5 +1,5 @@
 /**
- * Split a regex into tokens
+ * Split a regex into tokens and make a circuit with them
  * @constructor
  */
 function Circuit() {
@@ -129,6 +129,12 @@ function Circuit() {
      * @type {string}
      */
     this.TOKEN_GROUP_OPEN = '(';
+
+    /**
+     * Token which indicates to a "capture" group to do not "capture" (???)
+     * @type {string}
+     */
+    this.TOKEN_GROUP_DONT_CAPTURE = '?:';
 
     /**
      * Token which closes a capture group
@@ -276,7 +282,7 @@ Circuit.prototype.parse = function (regex) {
      * Current regex which is parsed
      * @type {string}
      */
-    this.regex = regex;
+    this.regex = this.TOKEN_GROUP_OPEN + this.TOKEN_GROUP_DONT_CAPTURE + regex + this.TOKEN_GROUP_CLOSE;
 
     this.reset();
 
@@ -313,10 +319,18 @@ Circuit.prototype.parse = function (regex) {
                 this.openQuantifier();
                 break;
 
+            case this.TOKEN_GROUP_DONT_CAPTURE:
+                this.doNotCapture();
+                break;
+
             // We found a character set
             case this.TOKEN_CHARACTER_SETS_OPEN:
                 stack.push(this.TOKEN_CHARACTER_SETS_CLOSE);
                 this.openCharacterSet();
+                break;
+
+            case this.TOKEN_ALTERNATION:
+                console.log('Alternation');
                 break;
 
             // We found a closing character
@@ -324,6 +338,10 @@ Circuit.prototype.parse = function (regex) {
             case this.TOKEN_QUANTIFIER_CLOSE:
             case this.TOKEN_CHARACTER_SETS_CLOSE:
                 var tokenClose = stack.pop();
+
+                if(!tokenClose) {
+                    throw new Error("Char #" + this.cursor + ": found a close character `" + this.token + "`, but it cannot close anything");
+                }
 
                 // Nodes were not closed in the good order
                 if (tokenClose != this.token) {
@@ -346,6 +364,10 @@ Circuit.prototype.parse = function (regex) {
                         this.closeCharacterSet();
                         break;
                 }
+
+                break;
+
+            default:
         }
 
         if (this.debug) {
@@ -361,6 +383,8 @@ Circuit.prototype.parse = function (regex) {
     if (stack.length != 0) {
         throw new Error("One or more nodes were not closed : `" + stack.reverse().join(', ') + "`");
     }
+
+    return this.circuit;
 };
 
 /**
@@ -376,6 +400,18 @@ Circuit.prototype.getNextToken = function () {
         return token;
     }
 
+    if (token == '?') {
+        token += this.getNextToken();
+
+        switch (token) {
+            case this.TOKEN_GROUP_DONT_CAPTURE:
+                break;
+            default:
+                this.cursor--;
+                return '?';
+        }
+    }
+
     return token;
 };
 
@@ -385,8 +421,14 @@ Circuit.prototype.getNextToken = function () {
  * @param {String} equivalent Token's equivalent
  */
 Circuit.prototype.replace = function (token, equivalent) {
-    this.regex = this.regex.replace(token, equivalent);
-    this.cursor -= token.length;
+    var length = token.length;
+
+    this.regex =
+        this.regex.substr(0, this.cursor - 1)
+        + equivalent
+        + this.regex.substr(this.cursor);
+
+    this.cursor -= length;
 };
 
 /**
@@ -395,7 +437,8 @@ Circuit.prototype.replace = function (token, equivalent) {
 Circuit.prototype.openCaptureGroup = function () {
     this.circuit.push({
         type: this.NODE_CAPTURE_GROUP,
-        from: this.cursor - 1
+        from: this.cursor - 1,
+        shouldCapture: true
     });
 };
 
@@ -409,6 +452,11 @@ Circuit.prototype.closeCaptureGroup = function () {
     lastCapture.capture = this.regex.substring(lastCapture.from, lastCapture.to);
 };
 
+Circuit.prototype.doNotCapture = function () {
+    var lastCapture = this.getLast(this.NODE_CAPTURE_GROUP);
+
+    lastCapture.shouldCapture = false;
+};
 
 /**
  * Opens a quantifier node
@@ -451,7 +499,7 @@ Circuit.prototype.closeQuantifier = function () {
             lastNode = this.getLast(this.NODE_CHARACTER_SET);
     }
 
-    if (lastNode.characterSet.length == 0) {
+    if (lastNode.type == this.TOKEN_CHARACTER_SETS_CLOSE && lastNode.characterSet.length == 0) {
         throw new Error('Can not set a quantifier for an empty node');
     }
 
@@ -701,7 +749,9 @@ Circuit.prototype.printCircuit = function () {
 
             case this.NODE_CAPTURE_GROUP:
                 args.push('CAPTURE_GROUP');
+                console.log(node);
                 args.push(node.capture);
+                args.push(node.shouldCapture);
         }
 
         if (args.length != 0) {
