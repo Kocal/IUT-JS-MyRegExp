@@ -95,12 +95,6 @@ function Circuit() {
     this.TOKEN_CHARACTER_CLASS_NUL = '\\0';
 
     /**
-     * Used to match x or y in x|y
-     * @type {string}
-     */
-    this.TOKEN_ALTERNATION = '|';
-
-    /**
      * Match input begin
      * @type {string}
      */
@@ -327,10 +321,6 @@ Circuit.prototype.parse = function (regex) {
             case this.TOKEN_CHARACTER_SETS_OPEN:
                 stack.push(this.TOKEN_CHARACTER_SETS_CLOSE);
                 this.openCharacterSet();
-                break;
-
-            case this.TOKEN_ALTERNATION:
-                console.log('Alternation');
                 break;
 
             // We found a closing character
